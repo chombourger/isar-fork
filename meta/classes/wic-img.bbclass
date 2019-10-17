@@ -155,8 +155,12 @@ EOSUDO
             -e ${IMAGE_BASENAME} ${WIC_CREATE_EXTRA_ARGS}
     sudo chown -R $(stat -c "%U" ${ISARROOT}) ${ISARROOT}/meta ${ISARROOT}/meta-isar ${ISARROOT}/scripts || true
     WIC_DIRECT=$(ls -t -1 ${BUILDCHROOT_DIR}/$WICTMP/${IMAGE_FULLNAME}.wic/*.direct | head -1)
-    cp -f ${WIC_DIRECT} ${WIC_IMAGE_FILE}
-    cp -f ${WIC_DIRECT}.bmap ${WIC_IMAGE_FILE}.bmap
+    sudo chown $(stat -c "%U:%G" ${ISARROOT}) ${WIC_DIRECT} ${WIC_DIRECT}.bmap
+    sudo mv -f ${WIC_DIRECT} ${WIC_IMAGE_FILE}
+    sudo mv -f ${WIC_DIRECT}.bmap ${WIC_IMAGE_FILE}.bmap
+    sudo rmdir --ignore-fail-on-non-empty \
+        ${BUILDCHROOT_DIR}/${WICTMP}/${IMAGE_FULLNAME}.wic \
+        ${BUILDCHROOT_DIR}/${WICTMP}
 }
 
 do_wic_image[file-checksums] += "${WKS_FILE_CHECKSUM}"
