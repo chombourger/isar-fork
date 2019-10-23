@@ -59,6 +59,7 @@ BBMULTICONFIG = " \
     hikey-stretch \
     nand-ubi-demo-buster \
     rpi-stretch \
+    creator-ci40-marduk-buster \
 "
 
 #
