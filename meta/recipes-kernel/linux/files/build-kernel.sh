@@ -37,6 +37,9 @@ REPACK_LINUX_IMAGE_DIR="${REPACK_DIR}/linux-image"
 REPACK_LINUX_HEADERS_DIR="${REPACK_DIR}/linux-headers"
 
 make ${KERNEL_CONFIG_TARGET} || exit ${?}
+if [ -n "${KERNEL_FRAGMENTS}" ]; then
+    scripts/kconfig/merge_config.sh -m .config ${KERNEL_FRAGMENTS}
+fi
 
 KV=$( make -s kernelrelease )
 if [ "${KV}" != "${PV}" ]; then

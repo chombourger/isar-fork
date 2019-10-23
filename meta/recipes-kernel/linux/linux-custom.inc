@@ -18,6 +18,19 @@ python() {
                          'linux-headers-' + kernel_name)
 }
 
+def config_fragments(d):
+    fragments = []
+    sources = d.getVar("SRC_URI").split()
+    for s in sources:
+        _, _, local, _, _, parm = bb.fetch.decodeurl(s)
+        apply = parm.get("apply")
+        if apply == "no":
+            continue
+        base, ext = os.path.splitext(os.path.basename(local))
+        if ext and ext in (".cfg"):
+            fragments.append(local)
+    return fragments
+
 inherit dpkg-base
 
 SRC_URI += "file://build-kernel.sh"
@@ -71,7 +84,15 @@ dpkg_runbuild() {
 		KERNEL_CONFIG_TARGET="defconfig"
 	fi
 
-	E="${@ isar_export_proxies(d)}"
+	# copy config fragments over to the kernel tree
+	src_frags="${@ " ".join(config_fragments(d)) }"
+	out_frags="${@ " ".join(map(lambda frag: 'debian/fragments/' + frag, config_fragments(d))) }"
+	rm -rf ${S}/debian/fragments
+	if [ -n "${src_frags}" ]; then
+		mkdir -p ${S}/debian/fragments
+		(cd ${WORKDIR} && cp ${src_frags} ${S}/debian/fragments/)
+	fi
+	export KERNEL_FRAGMENTS="${out_frags}"
 
 	export PV=${PV}
 	export KERNEL_NAME=${KERNEL_NAME_PROVIDED}
@@ -82,6 +103,7 @@ dpkg_runbuild() {
 	export KERNEL_FILE="${KERNEL_FILE}"
 	export KERNEL_HEADERS_DEBIAN_DEPENDS="${KERNEL_HEADERS_DEBIAN_DEPENDS}"
 
+	E="${@ isar_export_proxies(d)}"
 	sudo -E chroot --userspec=$( id -u ):$( id -g ) ${BUILDCHROOT_DIR} ${PP}/build-kernel.sh ${PP}/${PPS} ${DISTRO_ARCH}
 
 	if [ "${KERNEL_LIBC_DEV_DEPLOY}" != "1" ]; then
