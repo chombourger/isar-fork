@@ -1,0 +1,45 @@
+#!/bin/bash
+# Copyright (c) Mentor Graphics, a Siemens business, 2019
+# SPDX-License-Identifier: MIT
+
+# Load common stuff
+. ${S}/debian/isar/common || exit ${?}
+
+do_build() {
+
+    # Print a few things that are of particular interest
+    print_settings
+
+    # Process existing kernel configuration to make sure it is complete
+    # (use defaults for options that were not specified)
+    ${MAKE} O=${KERNEL_BUILD_DIR} olddefconfig prepare || exit ${?}
+
+    # Check if the recipe's PV makes sense
+    KR=$(${MAKE} O=${KERNEL_BUILD_DIR} -s --no-print-directory kernelrelease)
+    eval $(grep ^CONFIG_LOCALVERSION= ${KERNEL_BUILD_DIR}/${KCONF} || true)
+    if [ "${PV}-${KERNEL_NAME_PROVIDED}-${PR}" != "${KR}" ]; then
+        echo "ERROR: Recipe version (${PV}-${KERNEL_NAME_PROVIDED}-{PR}) does not seem to match the kernelrelease (${KR})!" 1>&2
+        echo "ERROR: Make sure the kernel version in your PV/PR settings and/or CONFIG_LOCALVERSION are aligned" 1>&2
+        exit 1
+    fi
+
+    # Trace what we do here
+    set -x
+
+    # Build the Linux kernel
+    ${MAKE} O=${KERNEL_BUILD_DIR} -j $(nproc) || exit ${?}
+
+    # Stop tracing
+    set +x
+}
+
+print_settings() {
+    cat <<EOF
+# Build settings:
+# ---------------
+# ARCH=${ARCH}
+# CROSS_COMPILE=${CROSS_COMPILE}
+EOF
+}
+
+main build ${*}
